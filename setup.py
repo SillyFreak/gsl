@@ -46,11 +46,13 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[],
+    install_requires=['antlr4-python3-runtime'],
 
     # You can install these using the following syntax, for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'dev': ['invoke'],
+        'yaml': ['ruamel.yaml'],
     },
 
     # package_data={
