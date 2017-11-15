@@ -31,9 +31,9 @@ class GSLVisitor(_GSLVisitor):
                 if t is None:
                     return '{}{}{}'.format(eol, indent, content)
                 elif t in {'>', '>"""'}:
-                    return '{}{}output("""{}""")'.format(eol, indent, content)
+                    return '{}{}output("""\\\n{}\\\n""")'.format(eol, indent, content)
                 elif t in {'`', '`"""'}:
-                    return '{}{}output(f"""{}""")'.format(eol, indent, content)
+                    return '{}{}output(f"""\\\n{}\\\n""")'.format(eol, indent, content)
 
             backlog = []
             for eol, indent, t, content in lines():
