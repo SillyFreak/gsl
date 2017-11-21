@@ -1,4 +1,3 @@
 *.py
 *.tokens
 !__init__.py
-!G4VisitorVisitor.py

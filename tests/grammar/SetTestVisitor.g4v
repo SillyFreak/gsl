@@ -1,0 +1,6 @@
+visitor SetTestVisitor for grammar SetTest;
+
+expr = set0;
+set0 = element*;
+element = .;
+intElement = .;

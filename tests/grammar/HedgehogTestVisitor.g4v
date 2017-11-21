@@ -1,0 +1,29 @@
+visitor HedgehogTestVisitor for grammar HedgehogTest;
+
+expr = message*;
+
+message = Message(
+  messageType=`messageType`,
+  discriminator=`discriminator`,
+  label=`label`,
+  docstring=[DOCSTRING],
+  fields=(field | oneof)*,
+  messageClasses=messageClass*,
+);
+
+field = Field(
+  repeated=`rep`?,
+  fieldType=`fieldType`,
+  name=`name`,
+  label=`label`,
+  languageFieldSpecs=languageFieldSpec*,
+);
+
+oneof = Oneof(
+  name=`name`,
+  fields=field*,
+);
+
+qualifiedIdentifier = identifier*;
+identifier = .;
+number = .;

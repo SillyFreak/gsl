@@ -1,0 +1,25 @@
+visitor G4VisitorVisitor for grammar G4Visitor;
+
+visitor = Visitor(name=`name`, grammar=`grammarName`, rules=visitorRule*);
+
+visitorRule = Rule(name=ruleName, body=body);
+
+exprBody = expr;
+objectBody = ObjectBody(name=identifier, params=objectParam*);
+listBody = listItem*;
+dictBody = dictItem*;
+
+objectParam = ObjectParam(name=identifier, expr=expr, optional=LBRACKET?);
+listItem = ListItem(expr=expr, optional=LBRACKET?);
+dictItem = DictItem(name=identifier, expr=expr, optional=LBRACKET?);
+
+ruleExpr = RuleExpr(rules=ruleName*, multi=STAR?, presence=QUESTION?);
+tokenExpr = TokenExpr(token=tokenName, multi=STAR?, presence=QUESTION?);
+refExpr = RefExpr(ref=attributeRef, presence=QUESTION?);
+
+lcName = .;
+ucName = .;
+identifier = .;
+ruleName = .;
+tokenName = .;
+attributeRef = .;

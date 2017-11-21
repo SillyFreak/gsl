@@ -61,6 +61,7 @@ setup(
 
     entry_points={
         'console_scripts': [
+            'g4v = gsl.g4visitor:main',
         ],
     },
 )
