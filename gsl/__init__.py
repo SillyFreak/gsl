@@ -93,12 +93,14 @@ def process_file(file):
     return parser.gsl().accept(GSLVisitor())
 
 
+__local = threading.local()
+
+
 def _stack():
-    local = threading.local()
     try:
-        return local.stack
+        return __local.stack
     except AttributeError:
-        stack = local.stack = []
+        __local.stack = stack = []
         return stack
 
 
