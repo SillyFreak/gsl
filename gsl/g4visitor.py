@@ -37,7 +37,10 @@ def process(in_file, out_file=None):
 from collections import namedtuple
 
 from gsl.antlr import ParseTreeVisitor
-from .{grammarName}Parser import {grammarName}Parser
+if __name__ is not None and "." in __name__:
+    from .{grammarName}Parser import {grammarName}Parser
+else:
+    from {grammarName}Parser import {grammarName}Parser
 
 """)
         for ruleName, body in rules:
