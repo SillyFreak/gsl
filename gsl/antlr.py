@@ -124,6 +124,9 @@ class Antlr(object):
     def visitor(self, Visitor):
         return dot_dict_visitor(self.Parser, Visitor)
 
+    def to_string(self, ctx):
+        return ctx.toStringTree(self.Parser.ruleNames, self.Parser)
+
     def parse_safe(self, parse):
         try:
             return parse()
