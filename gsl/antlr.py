@@ -1,4 +1,4 @@
-from antlr4 import InputStream, CommonTokenStream
+from antlr4 import InputStream, FileStream, CommonTokenStream
 from antlr4.error.Errors import ParseCancellationException
 from antlr4.error.ErrorListener import ErrorListener
 from .dot_dict import DotDict
@@ -106,6 +106,9 @@ class Antlr(object):
 
     def input_stream(self, text):
         return InputStream(text)
+
+    def file_stream(self, file, encoding='ascii', errors='strict'):
+        return FileStream(file, encoding, errors)
 
     def lexer(self, input):
         lexer = self.Lexer(input)
