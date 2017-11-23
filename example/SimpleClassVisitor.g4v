@@ -1,0 +1,6 @@
+visitor SimpleClassVisitor for grammar SimpleClass;
+
+model = classDef*;
+classDef = Class(name=IDENTIFIER, members=(fieldDef | methodDef)*);
+fieldDef = Field(name=IDENTIFIER);
+methodDef = Method(name=IDENTIFIER);
