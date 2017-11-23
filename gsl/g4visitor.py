@@ -21,12 +21,10 @@ def process(in_file, out_file=None):
 
     dirname = os.path.dirname(in_file)
     basename, ext = os.path.splitext(os.path.basename(in_file))
+    if basename != model.name or ext != '.g4v':
+        raise ValueError(f"Expected visitor in file '{model.name}.g4v', not in'{basename}{ext}'.")
 
     if out_file is None:
-        if basename != model.name or ext != '.g4v':
-            raise ValueError(f"Expected visitor in file '{model.name}.g4v', not in'{basename}{ext}'. "
-                             f"Try specifying the output file explicitly.")
-
         out_file = os.path.join(dirname, basename + '.py')
 
     def cap(str):
