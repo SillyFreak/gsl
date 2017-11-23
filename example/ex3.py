@@ -1,13 +1,16 @@
 from collections import namedtuple
 from gsl import file, output
 
+Class = namedtuple('Class', ('name', 'members',))
 Field = namedtuple('Field', ('name',))
 Method = namedtuple('Method', ('name',))
 
-def class_declaration(name, members):
+model = Class("HelloWorld", [Field("foo"), Method("bar")])
+
+def class_declaration(model):
     output(f"""\
-public class {name} {{""")
-    for member in members:
+public class {model.name} {{""")
+    for member in model.members:
         if isinstance(member, Field):
             output(f"""\
 
@@ -22,4 +25,4 @@ public class {name} {{""")
 }}""")
 
 with file("HelloWorld.java"):
-    class_declaration("HelloWorld", [Field("foo"), Method("bar")])
+    class_declaration(model)

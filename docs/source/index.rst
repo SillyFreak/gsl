@@ -30,12 +30,15 @@ Consider this simple code generator::
 
     from collections import namedtuple
 
+    Class = namedtuple('Class', ('name', 'members',))
     Field = namedtuple('Field', ('name',))
     Method = namedtuple('Method', ('name',))
 
-    def class_declaration(name, members):
-        print(f"public class {name} {{")
-        for member in members:
+    model = Class("HelloWorld", [Field("foo"), Method("bar")])
+
+    def class_declaration(model):
+        print(f"public class {model.name} {{")
+        for member in model.members:
             if isinstance(member, Field):
                 print(f"")
                 print(f"    private int {member.name};")
@@ -46,7 +49,7 @@ Consider this simple code generator::
                 print(f"    }}")
         print(f"}}")
 
-    class_declaration("HelloWorld", [Field("foo"), Method("bar")])
+    class_declaration(model)
 
 Which outputs::
 
@@ -67,13 +70,16 @@ We advocate for the following style::
 
     from collections import namedtuple
 
+    Class = namedtuple('Class', ('name', 'members',))
     Field = namedtuple('Field', ('name',))
     Method = namedtuple('Method', ('name',))
 
-    def class_declaration(name, members):
+    model = Class("HelloWorld", [Field("foo"), Method("bar")])
+
+    def class_declaration(model):
         print(f"""\
-    public class {name} {{""")
-        for member in members:
+    public class {model.name} {{""")
+        for member in model.members:
             if isinstance(member, Field):
                 print(f"""\
 
@@ -87,7 +93,7 @@ We advocate for the following style::
         print(f"""\
     }}""")
 
-    class_declaration("HelloWorld", [Field("foo"), Method("bar")])
+    class_declaration(model)
 
 This code has a different readability tradeoff.
 Generator code indentation is interrupted by target code,
@@ -105,13 +111,16 @@ GSL allows to easily specify the target file for any output::
     from collections import namedtuple
     from gsl import file, output
 
+    Class = namedtuple('Class', ('name', 'members',))
     Field = namedtuple('Field', ('name',))
     Method = namedtuple('Method', ('name',))
 
-    def class_declaration(name, members):
+    model = Class("HelloWorld", [Field("foo"), Method("bar")])
+
+    def class_declaration(model):
         output(f"""\
-    public class {name} {{""")
-        for member in members:
+    public class {model.name} {{""")
+        for member in model.members:
             if isinstance(member, Field):
                 output(f"""\
 
@@ -126,7 +135,7 @@ GSL allows to easily specify the target file for any output::
     }}""")
 
     with file("HelloWorld.java"):
-        class_declaration("HelloWorld", [Field("foo"), Method("bar")])
+        class_declaration(model)
 
 (without any ``file`` open, output still goes to stdout,
 so ``output`` can be used even before specifying the destination.
@@ -308,7 +317,9 @@ Let's create a visitor to process our parse tree.. ::
         def visitMethodDef(self, ctx):
             return Method(self.visitNode(ctx.IDENTIFIER()))
 
-    print(model.accept(SimpleClassVisitor()))
+    model = p.model().accept(SimpleClassVisitor())
+    
+    print(model)
 
 ... and take a look at the result::
 

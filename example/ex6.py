@@ -12,7 +12,6 @@ class HelloWorld {
     method bar;
 }
 """))
-model = p.model()
 
 Class = namedtuple('Class', ('name', 'members',))
 Field = namedtuple('Field', ('name',))
@@ -34,4 +33,6 @@ class SimpleClassVisitor(ParseTreeVisitor):
     def visitMethodDef(self, ctx):
         return Method(self.visitNode(ctx.IDENTIFIER()))
 
-print(model.accept(SimpleClassVisitor()))
+model = p.model().accept(SimpleClassVisitor())
+
+print(model)
