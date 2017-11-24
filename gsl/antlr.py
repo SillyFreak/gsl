@@ -32,6 +32,15 @@ class ParseTreeVisitor(object):
     def get_children(self, node, *types):
         return (child for child in node.getChildren() if len(types) == 0 or isinstance(child, types))
 
+    def has_children(self, node, *types):
+        it = self.get_children(node, *types)
+        try:
+            next(it)
+        except StopIteration:
+            return False
+        else:
+            return True
+
     def get_child(self, node, *types):
         child, = self.get_children(node, *types)
         return child

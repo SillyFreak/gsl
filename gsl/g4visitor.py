@@ -84,7 +84,7 @@ class {visitorName}(ParseTreeVisitor):""")
     def processExprCore(expr, check=False):
         if isinstance(expr, RuleExpr):
             args = "ctx" + ''.join(f", {model.grammar}Parser.{cap(t)}Context" for t in expr.rules)
-            operation = "self.get_children" if check or expr.multi else "self.get_child"
+            operation = "self.has_children" if check else "self.get_children" if expr.multi else "self.get_child"
             return f"{operation}({args})"
         elif isinstance(expr, TokenExpr):
             return f"ctx.{expr.token}()"
