@@ -106,14 +106,19 @@ Adding GSL
 
 At this level of abstraction, GSL's main use comes from output handling.
 Right now, generated code goes to standard output.
-GSL allows to easily specify the target file for any output::
+GSL allows to easily specify the target file for any output, by using the ``file`` and ``output`` functions.
+Without any ``file`` open, output still goes to stdout,
+so ``output`` can be used even before specifying the destination.
 
-    from collections import namedtuple
-    from gsl import file, output
+We will also replace ``namedtuple`` with GSL's ``pseudo_tuple``.
+Pseudo tuples are not really Python tuples; they serve the same purpose, but are modifiable.
+This can come in handy if we want to enrich the in-memory data structure of our model with inferred information. ::
 
-    Class = namedtuple('Class', ('name', 'members',))
-    Field = namedtuple('Field', ('name',))
-    Method = namedtuple('Method', ('name',))
+    from gsl import pseudo_tuple, file, output
+
+    Class = pseudo_tuple('Class', ('name', 'members',))
+    Field = pseudo_tuple('Field', ('name',))
+    Method = pseudo_tuple('Method', ('name',))
 
     model = Class("HelloWorld", [Field("foo"), Method("bar")])
 
@@ -137,54 +142,40 @@ GSL allows to easily specify the target file for any output::
     with file("HelloWorld.java"):
         class_declaration(model)
 
-(without any ``file`` open, output still goes to stdout,
-so ``output`` can be used even before specifying the destination.
-
 YAML
 ----
 
 GSL provides a thin wrapper around the `ruamel.yaml`_ YAML library::
 
-    from collections import namedtuple
-    from gsl import file, output
+    from gsl import pseudo_tuple, file, output
     from gsl.yaml import YAML
 
-    def class_declaration(model):
-        output(f"""\
-    public class {model.name} {{""")
-        for member in model.members:
-            if 'field' in member:
-                output(f"""\
-
-        private int {member.field};""")
-            elif 'method' in member:
-                output(f"""\
-
-        public void {member.method}() {{
-            // TODO
-        }}""")
-        output(f"""\
-    }}""")
+    Class = pseudo_tuple('Class', ('name', 'members',))
+    Field = pseudo_tuple('Field', ('name',))
+    Method = pseudo_tuple('Method', ('name',))
 
     yaml = YAML(typ='safe')
+    yaml.register_class(Class)
+    yaml.register_class(Field)
+    yaml.register_class(Method)
     model = yaml.load("""\
-    - name: HelloWorld
+    - !Class
+      name: HelloWorld
       members:
-      - field: foo
-      - method: bar
+      - !Field
+        name: foo
+      - !Method
+        name: bar
     """)
+
+    # def class_declaration
 
     for class_model in model:
         with file(f"{class_model.name}.java"):
             class_declaration(class_model)
 
-The model is a little different; instead of ``Field('foo')``, ``{'field': 'foo'}`` is used here.
-That helps us keep the YAML readable.
-
-The one difference from normal YAML usage is in the accesses like ``model.name``.
-Regularly, the YAML parser uses plain ``dict`` s here, requiring ``model['name']`` etc.
-That (and all other ``dict`` functionality) is still there,
-but dot-access is added as it is often more readable and makes sense for many models.
+Tags like ``!Class`` allow us to get the exact same model as before.
+One caveat here is that the classes to be generated need to be modifiable; ``namedtuple`` wouldn't have worked here.
 
 .. _ruamel.yaml: http://yaml.readthedocs.io/en/latest/overview.html
 
@@ -284,22 +275,24 @@ Parse tree transformation with visitors
 
 We could use ``fieldDef()`` and ``methodDef()`` to get fields and methods separately,
 but then we lose their relative order.
-Also, ``IDENTIFIER()`` is not really expressive.
+Up until now, we also managed to have our model represented the same way in memory;
+the code here is specific to what our grammar looks like.
+
 What we really want is a model that reflects our needs:
 ignore semicolons and list fields and methods together.
 ANTLR provides visitors for doing parse tree transformations,
 and GSL adds its own APIs and DSL (g4v) for making it as seamless as possible.
 
-Let's create a visitor to process our parse tree.. ::
+Let's create a visitor to process our parse tree... ::
 
-    from collections import namedtuple
-    from gsl.antlr import ParseTreeVisitor
+    from gsl import pseudo_tuple, file, output
+    from gsl.antlr import Antlr, ParseTreeVisitor
 
     # ...
 
-    Class = namedtuple('Class', ('name', 'members',))
-    Field = namedtuple('Field', ('name',))
-    Method = namedtuple('Method', ('name',))
+    Class = pseudo_tuple('Class', ('name', 'members',))
+    Field = pseudo_tuple('Field', ('name',))
+    Method = pseudo_tuple('Method', ('name',))
 
     class SimpleClassVisitor(ParseTreeVisitor):
         def visitModel(self, ctx):
@@ -325,7 +318,7 @@ Let's create a visitor to process our parse tree.. ::
 
     [Class(name='HelloWorld', members=[Field(name='foo'), Method(name='bar')])]
 
-Very readable!
+Exactly what we had before!
 Before we integrate this into the rest of our code, let's automate the creation of this visitor:
 
 ANTLR 4 Visitors DSL (g4v)

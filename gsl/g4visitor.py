@@ -34,7 +34,7 @@ def process(in_file, out_file=None):
         visitorName, grammarName, rules = visitor
 
         output(f"""\
-from collections import namedtuple
+from gsl import pseudo_tuple
 
 from gsl.antlr import ParseTreeVisitor
 if __name__ is not None and "." in __name__:
@@ -48,7 +48,7 @@ else:
                 objectName, params = body
                 paramsStr = ' '.join(f"{param.name!r}," for param in params)
                 output(f"""\
-{objectName} = namedtuple({objectName!r}, ({paramsStr}))""")
+{objectName} = pseudo_tuple({objectName!r}, ({paramsStr}))""")
 
         output(f"""\
 

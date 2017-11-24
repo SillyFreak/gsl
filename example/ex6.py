@@ -1,5 +1,4 @@
-from collections import namedtuple
-from gsl import file, output
+from gsl import pseudo_tuple, file, output
 from gsl.antlr import Antlr, ParseTreeVisitor
 
 from SimpleClassLexer import SimpleClassLexer
@@ -13,9 +12,9 @@ class HelloWorld {
 }
 """))
 
-Class = namedtuple('Class', ('name', 'members',))
-Field = namedtuple('Field', ('name',))
-Method = namedtuple('Method', ('name',))
+Class = pseudo_tuple('Class', ('name', 'members',))
+Field = pseudo_tuple('Field', ('name',))
+Method = pseudo_tuple('Method', ('name',))
 
 class SimpleClassVisitor(ParseTreeVisitor):
     def visitModel(self, ctx):

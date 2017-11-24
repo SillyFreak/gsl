@@ -1,9 +1,8 @@
-from collections import namedtuple
-from gsl import file, output
+from gsl import pseudo_tuple, file, output
 
-Class = namedtuple('Class', ('name', 'members',))
-Field = namedtuple('Field', ('name',))
-Method = namedtuple('Method', ('name',))
+Class = pseudo_tuple('Class', ('name', 'members',))
+Field = pseudo_tuple('Field', ('name',))
+Method = pseudo_tuple('Method', ('name',))
 
 model = Class("HelloWorld", [Field("foo"), Method("bar")])
 

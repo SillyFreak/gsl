@@ -1,18 +1,21 @@
-from collections import namedtuple
+from gsl import pseudo_tuple
 
 from gsl.antlr import ParseTreeVisitor
-from .G4VisitorParser import G4VisitorParser
+if __name__ is not None and "." in __name__:
+    from .G4VisitorParser import G4VisitorParser
+else:
+    from G4VisitorParser import G4VisitorParser
 
 
-Visitor = namedtuple('Visitor', ('name', 'grammar', 'rules',))
-Rule = namedtuple('Rule', ('name', 'body',))
-ObjectBody = namedtuple('ObjectBody', ('name', 'params',))
-ObjectParam = namedtuple('ObjectParam', ('name', 'expr', 'optional',))
-ListItem = namedtuple('ListItem', ('expr', 'optional',))
-DictItem = namedtuple('DictItem', ('name', 'expr', 'optional',))
-RuleExpr = namedtuple('RuleExpr', ('rules', 'multi', 'presence',))
-TokenExpr = namedtuple('TokenExpr', ('token', 'multi', 'presence',))
-RefExpr = namedtuple('RefExpr', ('ref', 'presence',))
+Visitor = pseudo_tuple('Visitor', ('name', 'grammar', 'rules',))
+Rule = pseudo_tuple('Rule', ('name', 'body',))
+ObjectBody = pseudo_tuple('ObjectBody', ('name', 'params',))
+ObjectParam = pseudo_tuple('ObjectParam', ('name', 'expr', 'optional',))
+ListItem = pseudo_tuple('ListItem', ('expr', 'optional',))
+DictItem = pseudo_tuple('DictItem', ('name', 'expr', 'optional',))
+RuleExpr = pseudo_tuple('RuleExpr', ('rules', 'multi', 'presence',))
+TokenExpr = pseudo_tuple('TokenExpr', ('token', 'multi', 'presence',))
+RefExpr = pseudo_tuple('RefExpr', ('ref', 'presence',))
 
 
 class G4VisitorVisitor(ParseTreeVisitor):
