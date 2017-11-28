@@ -104,17 +104,17 @@ allowing the first line of the literal to start at the same level as the rest.
 Adding GSL
 ^^^^^^^^^^
 
-At this level of abstraction, GSL's main use comes from output handling.
-Right now, generated code goes to standard output.
-GSL allows to easily specify the target file for any output, by using the ``file`` and ``output`` functions.
-Without any ``file`` open, output still goes to stdout,
-so ``output`` can be used even before specifying the destination.
+Directly printing strings takes us some flexibility:
+no postprocessing of generated code, no choice for the output location (at least in this simple form).
+But it is, of course, very simple.
+The ``yield`` keyword gives us back that flexibility, with almost no readability tradeoff.
 
 We will also replace ``namedtuple`` with GSL's ``pseudo_tuple``.
-Pseudo tuples are not really Python tuples; they serve the same purpose, but are modifiable.
+Pseudo tuples are not really Python tuples; they serve the same purpose as named tuples,
+but are modifiable and can hold additional data.
 This can come in handy if we want to enrich the in-memory data structure of our model with inferred information. ::
 
-    from gsl import pseudo_tuple, file, output
+    from gsl import pseudo_tuple, lines, printlines
 
     Class = pseudo_tuple('Class', ('name', 'members',))
     Field = pseudo_tuple('Field', ('name',))
@@ -123,31 +123,56 @@ This can come in handy if we want to enrich the in-memory data structure of our 
     model = Class("HelloWorld", [Field("foo"), Method("bar")])
 
     def class_declaration(model):
-        output(f"""\
+        yield from lines(f"""\
     public class {model.name} {{""")
         for member in model.members:
             if isinstance(member, Field):
-                output(f"""\
+                yield from lines(f"""\
 
         private int {member.name};""")
             elif isinstance(member, Method):
-                output(f"""\
+                yield from lines(f"""\
 
         public void {member.name}() {{
             // TODO
         }}""")
-        output(f"""\
+            yield from lines(f"""\
     }}""")
 
-    with file("HelloWorld.java"):
-        class_declaration(model)
+    with open("HelloWorld.java", "w") as f:
+        printlines(class_declaration(model)), file=f)
+
+If you're not familiar with ``yield``, here's the (simplified) basics: it turns the function into a "generator",
+meaning it returns multiple values in a stream.
+The function is run on-demand to the next ``yield`` statement whenever a value is needed, which is generally good.
+It might lead to confusion if the generator function has side effects, so try to avoid them.
+
+``yield from`` is a variant that, instead of returning one value, returns all values from an iterable
+(such as another generator).
+In other words: ``yield from lines(...)`` means that the next few values will come from the ``lines`` generator.
+Specifically, it splits the string into individual lines.
+Why not just yield the combination of lines, just as we printed multiline strings in the previous version?
+Well, we're doing all this to gain flexibility, and one thing we could use that for
+is prefixing each line with additional indentation or comment them out.
+That is easy if we yield individual lines, not so much if we return multiline strings.
+
+If you're not sold on all that, take a look at this function and
+think about how to do the same with ``print`` or without splitting lines::
+
+    def commented(code, block=False):
+        if block:
+            yield "/*"
+        for line in code:
+            yield (" * " if block else "// ") + line
+        if block:
+            yield " */"
 
 YAML
 ----
 
 GSL provides a thin wrapper around the `ruamel.yaml`_ YAML library::
 
-    from gsl import pseudo_tuple, file, output
+    from gsl import pseudo_tuple, lines, printlines
     from gsl.yaml import YAML
 
     Class = pseudo_tuple('Class', ('name', 'members',))
@@ -171,11 +196,11 @@ GSL provides a thin wrapper around the `ruamel.yaml`_ YAML library::
     # def class_declaration
 
     for class_model in model:
-        with file(f"{class_model.name}.java"):
-            class_declaration(class_model)
+        with open(f"{class_model.name}.java", "w") as f:
+            printlines(class_declaration(class_model), file=f)
 
 Tags like ``!Class`` allow us to get the exact same model as before.
-One caveat here is that the classes to be generated need to be modifiable; ``namedtuple`` wouldn't have worked here.
+One caveat is that the classes to be generated need to be modifiable; ``namedtuple`` wouldn't have worked here.
 
 .. _ruamel.yaml: http://yaml.readthedocs.io/en/latest/overview.html
 
@@ -238,30 +263,30 @@ The parse tree contains all tokens consumed, including ``class``, ``method``, ``
 that were important for parsing but don't add anything to the model.
 We can already generate code from this model::
 
-    from gsl import file, output
+    from gsl import lines, printlines
 
     # ...
 
     def class_declaration(model):
-        output(f"""\
+        yield from lines(f"""\
     public class {model.IDENTIFIER()} {{""")
         for member in model.getChildren():
             if isinstance(member, SimpleClassParser.FieldDefContext):
-                output(f"""\
+                yield from lines(f"""\
 
         private int {member.IDENTIFIER()};""")
             elif isinstance(member, SimpleClassParser.MethodDefContext):
-                output(f"""\
+                yield from lines(f"""\
 
         public void {member.IDENTIFIER()}() {{
             // TODO
         }}""")
-        output(f"""\
+        yield from lines(f"""\
     }}""")
 
     for class_model in model.classDef():
-        with file(f"{class_model.IDENTIFIER()}.java"):
-            class_declaration(class_model)
+        with open(f"{class_model.IDENTIFIER()}.java", "w") as f:
+            printlines(class_declaration(class_model), file=f)
 
 This code has a slight downside: ``getChildren()`` returns all children,
 not only the fields and methods we're interested in.
@@ -344,7 +369,7 @@ Then, create the visitor from this (overwriting the file created by ANTLR::
 
 And finally, the full code generator::
 
-    from gsl import file, output
+    from gsl import lines, printlines
     from gsl.antlr import Antlr
 
     from SimpleClassLexer import SimpleClassLexer
@@ -361,25 +386,75 @@ And finally, the full code generator::
     model = p.model().accept(SimpleClassVisitor())
 
     def class_declaration(model):
-        output(f"""\
+        yield from lines(f"""\
     public class {model.name} {{""")
         for member in model.members:
             if isinstance(member, Field):
-                output(f"""\
+                yield from lines(f"""\
 
         private int {member.name};""")
             elif isinstance(member, Method):
-                output(f"""\
+                yield from lines(f"""\
 
         public void {member.name}() {{
             // TODO
         }}""")
-        output(f"""\
+        yield from lines(f"""\
     }}""")
 
     for class_model in model:
-        with file(f"{class_model.name}.java"):
-            class_declaration(class_model)
+        with open(f"{class_model.name}.java", "w") as f:
+            printlines(class_declaration(class_model), file=f)
+
+Structuring complex code generators
+-----------------------------------
+
+Up until now, we have looked at how to write a code generator for one kind of code.
+In reality, the same model may be used to generate many different sources, such as accompanying SQL scripts,
+or simply the same code in different target languages.
+
+Apart from separating the code into different Python modules,
+it also helps to differentiate between diffferent kinds of code generator functions and employ a naming convention.
+Here is a suggestion:
+
+- ``something_str(...)``: these functions return a code snippet as a single string
+- ``something_code(...)``: these functions yield multiple lines of code (not necessarily a whole file)
+- ``generate_something_code(...)``: these functions actually write generated code to one or more output files
+
+A module would for example have a ``generate_code()`` function that generates all relevant files::
+
+    def generate_code(model):
+        for foo in model.foos:
+            generate_foo_code(foo)
+        for bar in model.bars:
+            generate_bar_code(bar)
+
+Each individual code generator would print the code to a file, but to use ``yield``,
+we need a separate code function that we would call immediately.
+It makes sense to use a nested function for this,
+and just call it ``code`` as it yields "the" code, not just some, for foo::
+
+    def generate_foo_code(foo):
+        def code():
+            yield "foo:"
+            for snippet in foo.snippets:
+                yield from foo_snippet_code(snippet)
+
+        with open(foo_filename(foo)) as f:
+            printlines(code(foo), file=f)
+
+Hiding actually opening and writing the file below the possibly long ``code()`` function is ugly,
+so we provide the additional ``print_to`` decorator that runs the function::
+
+    def generate_foo_code(foo):
+        @print_to(foo_filename(foo)):
+        def code():
+            yield "foo:"
+            for snippet in foo.snippets:
+                yield from foo_snippet_code(snippet)
+
+A thing to watch out for here is that ``print_to`` does not transform the method, it executes it once with context!
+Think of ``print_to`` as a pseudo content manager, and the ``code`` function as a ``with`` block that allows ``yield``.
 
 Learn More
 ----------

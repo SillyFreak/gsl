@@ -1,4 +1,4 @@
-from gsl import file, output
+from gsl import lines, printlines
 from gsl.antlr import Antlr
 
 from SimpleClassLexer import SimpleClassLexer
@@ -14,22 +14,22 @@ class HelloWorld {
 model = p.model()
 
 def class_declaration(model):
-    output(f"""\
+    yield from lines(f"""\
 public class {model.IDENTIFIER()} {{""")
     for member in model.getChildren():
         if isinstance(member, SimpleClassParser.FieldDefContext):
-            output(f"""\
+            yield from lines(f"""\
 
     private int {member.IDENTIFIER()};""")
         elif isinstance(member, SimpleClassParser.MethodDefContext):
-            output(f"""\
+            yield from lines(f"""\
 
     public void {member.IDENTIFIER()}() {{
         // TODO
     }}""")
-    output(f"""\
+    yield from lines(f"""\
 }}""")
 
 for class_model in model.classDef():
-    with file(f"{class_model.IDENTIFIER()}.java"):
-        class_declaration(class_model)
+    with open(f"{class_model.IDENTIFIER()}.java", "w") as f:
+        printlines(class_declaration(class_model), file=f)

@@ -1,4 +1,4 @@
-from gsl import pseudo_tuple, file, output
+from gsl import pseudo_tuple, lines, printlines
 from gsl.yaml import YAML
 
 Class = pseudo_tuple('Class', ('name', 'members',))
@@ -19,25 +19,23 @@ model = yaml.load("""\
     name: bar
 """)
 
-print(model)
-
 def class_declaration(model):
-    output(f"""\
+    yield from lines(f"""\
 public class {model.name} {{""")
     for member in model.members:
         if isinstance(member, Field):
-            output(f"""\
+            yield from lines(f"""\
 
     private int {member.name};""")
         elif isinstance(member, Method):
-            output(f"""\
+            yield from lines(f"""\
 
     public void {member.name}() {{
         // TODO
     }}""")
-    output(f"""\
+    yield from lines(f"""\
 }}""")
 
 for class_model in model:
-    with file(f"{class_model.name}.java"):
-        class_declaration(class_model)
+    with open(f"{class_model.name}.java", "w") as f:
+        printlines(class_declaration(class_model), file=f)

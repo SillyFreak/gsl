@@ -49,29 +49,17 @@ def pseudo_tuple(name, fields):
     })
 
 
-__local = threading.local()
+def lines(str):
+    yield from str.splitlines()
 
 
-def _stack():
-    try:
-        return __local.stack
-    except AttributeError:
-        __local.stack = stack = []
-        return stack
+def printlines(lines, end='\n', file=None):
+    for line in lines:
+        print(line, end=end, file=file)
 
 
-@contextmanager
-def file(name):
-    stack = _stack()
-    with open(name, "w") as f:
-        stack.append(f)
-        try:
-            yield
-        finally:
-            stack.pop()
-
-
-def output(string):
-    stack = _stack()
-    file = stack[-1] if len(stack) > 0 else None
-    print(string, file=file)
+def print_to(file, mode="w"):
+    def decorator(fn):
+        with open(file, mode) as f:
+            printlines(fn(), file=f)
+    return decorator

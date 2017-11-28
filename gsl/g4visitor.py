@@ -1,7 +1,7 @@
 import os.path
 from antlr4 import FileStream
-from . import file, output
-from .antlr import Antlr, ParseTreeVisitor
+from . import lines, print_to
+from .antlr import Antlr
 
 from .grammar.G4VisitorLexer import G4VisitorLexer
 from .grammar.G4VisitorParser import G4VisitorParser
@@ -14,7 +14,7 @@ class G4VisitorVisitor(_G4VisitorVisitor):
         return super(G4VisitorVisitor, self).visitAttributeRef(ctx)[1:-1]
 
 
-def process(in_file, out_file=None):
+def generate_code(in_file, out_file=None):
     antlr = Antlr(G4VisitorLexer, G4VisitorParser)
     p = antlr.parser(FileStream(in_file))
     model = p.visitor().accept(G4VisitorVisitor())
@@ -27,13 +27,15 @@ def process(in_file, out_file=None):
     if out_file is None:
         out_file = os.path.join(dirname, basename + '.py')
 
-    def cap(str):
-        return str[0:1].upper() + str[1:]
+    @print_to(out_file)
+    def code():
+        def cap(str):
+            return str[0:1].upper() + str[1:]
 
-    def processVisitor(visitor):
-        visitorName, grammarName, rules = visitor
+        def visitor_code(visitor):
+            visitorName, grammarName, rules = visitor
 
-        output(f"""\
+            yield from lines(f"""\
 from gsl import pseudo_tuple
 
 from gsl.antlr import ParseTreeVisitor
@@ -42,62 +44,63 @@ if __name__ is not None and "." in __name__:
 else:
     from {grammarName}Parser import {grammarName}Parser
 
+
 """)
-        for ruleName, body in rules:
-            if isinstance(body, ObjectBody):
-                objectName, params = body
-                paramsStr = ' '.join(f"{param.name!r}," for param in params)
-                output(f"""\
+            for ruleName, body in rules:
+                if isinstance(body, ObjectBody):
+                    objectName, params = body
+                    paramsStr = ' '.join(f"{param.name!r}," for param in params)
+                    yield from lines(f"""\
 {objectName} = pseudo_tuple({objectName!r}, ({paramsStr}))""")
 
-        output(f"""\
+            yield from lines(f"""\
 
 
 class {visitorName}(ParseTreeVisitor):""")
-        for ruleName, body in rules:
-            output(f"""\
+            for ruleName, body in rules:
+                yield from lines(f"""\
     def visit{cap(ruleName)}(self, ctx: {grammarName}Parser.{cap(ruleName)}Context):""")
-            processBody(body)
-            output(f"""\
+                yield from body_code(body)
+                yield from lines(f"""\
+
 """)
 
-    def processBody(body):
-        if isinstance(body, ObjectBody):
-            processObjectBody(body)
-        else:
-            processExprBody(body)
+        def body_code(body):
+            if isinstance(body, ObjectBody):
+                yield from object_body_code(body)
+            else:
+                yield from expr_body_code(body)
 
-    def processObjectBody(objectBody):
-        output(f"""\
+        def object_body_code(objectBody):
+            yield from lines(f"""\
         return {objectBody.name}(""")
-        for paramName, expr, optional in objectBody.params:
-            opt = f" if {processExprCore(expr, True)} else None" if optional else ""
-            output(f"""\
-            {processExpr(expr)}{opt},""")
-        output(f"""\
+            for paramName, expr, optional in objectBody.params:
+                opt = f" if {expr_core_str(expr, True)} else None" if optional else ""
+                yield from lines(f"""\
+            {expr_str(expr)}{opt},""")
+            yield from lines(f"""\
         )""")
 
-    def processExprBody(exprBody):
-        output(f"""\
-        return {processExpr(exprBody)}""")
+        def expr_body_code(exprBody):
+            yield from lines(f"""\
+        return {expr_str(exprBody)}""")
 
-    def processExprCore(expr, check=False):
-        if isinstance(expr, RuleExpr):
-            args = "ctx" + ''.join(f", {model.grammar}Parser.{cap(t)}Context" for t in expr.rules)
-            operation = "self.has_children" if check else "self.get_children" if expr.multi else "self.get_child"
-            return f"{operation}({args})"
-        elif isinstance(expr, TokenExpr):
-            return f"ctx.{expr.token}()"
-        elif isinstance(expr, RefExpr):
-            return f"ctx.{expr.ref}"
+        def expr_core_str(expr, check=False):
+            if isinstance(expr, RuleExpr):
+                args = "ctx" + ''.join(f", {model.grammar}Parser.{cap(t)}Context" for t in expr.rules)
+                operation = "self.has_children" if check else "self.get_children" if expr.multi else "self.get_child"
+                return f"{operation}({args})"
+            elif isinstance(expr, TokenExpr):
+                return f"ctx.{expr.token}()"
+            elif isinstance(expr, RefExpr):
+                return f"ctx.{expr.ref}"
 
-    def processExpr(expr):
-        core = processExprCore(expr)
-        operation = "bool" if expr.presence else "self.visitNode" if isinstance(expr, RefExpr) or not expr.multi else "self.visitNodes"
-        return f"{operation}({core})"
+        def expr_str(expr):
+            core = expr_core_str(expr)
+            operation = "bool" if expr.presence else "self.visitNode" if isinstance(expr, RefExpr) or not expr.multi else "self.visitNodes"
+            return f"{operation}({core})"
 
-    with file(out_file):
-        processVisitor(model)
+        yield from visitor_code(model)
 
 
 def main():
@@ -114,7 +117,7 @@ def main():
         print("explicit out_file only allowed for a single in_file")
 
     for in_file in args.in_files:
-        process(in_file, args.out_file)
+        generate_code(in_file, args.out_file)
 
 
 if __name__ == '__main__':
