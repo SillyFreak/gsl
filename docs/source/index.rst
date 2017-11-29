@@ -10,7 +10,8 @@ again borrowing from iMatix.
 In contrast to iMatix' GSL, this tool does not use its own scripting language but Python;
 with Python 3.6's `f-strings`_, it is very appropriate for code generation tasks.
 GSL's focus lies on reading the source models and making them available in a convenient form,
-and providing utilities that are useful during code generation, especially for string manipulation.
+and providing utilities that are useful during code generation,
+especially for output handling and string manipulation.
 
 .. _iMatix' GSL: https://github.com/imatix/gsl
 .. _here: https://github.com/imatix/gsl#model-oriented-programming

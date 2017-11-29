@@ -20,7 +20,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='gsl',
     version='0.0.0',
-    description='General Scripting Language',
+    description='General Scripting Library',
     long_description=long_description,
     url="https://github.com/SillyFreak/gsl",
     author="Silly Freak",
