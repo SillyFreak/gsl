@@ -2,7 +2,7 @@ from invoke import run, task
 
 @task
 def g4v_antlr(context):
-    run("antlr4 -Dlanguage=Python3 -package gsl.grammar -visitor -no-listener gsl/grammar/GSL.g4 gsl/grammar/G4Visitor.g4")
+    run("antlr4 -Dlanguage=Python3 -package gsl.grammar -visitor -no-listener gsl/grammar/G4Visitor.g4")
 
 @task
 def g4v_g4v(context):
