@@ -140,7 +140,7 @@ This can come in handy if we want to enrich the in-memory data structure of our 
     }}""")
 
     with open("HelloWorld.java", "w") as f:
-        printlines(class_declaration(model)), file=f)
+        printlines(class_declaration(model), file=f)
 
 If you're not familiar with ``yield``, here's the (simplified) basics: it turns the function into a "generator",
 meaning it returns multiple values in a stream.
