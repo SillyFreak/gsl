@@ -1,4 +1,4 @@
-visitor G4VisitorVisitor for grammar G4Visitor;
+visitor G4VVisitor for grammar G4Visitor;
 
 visitor = Visitor(name=`name`, grammar=`grammarName`, rules=visitorRule*);
 

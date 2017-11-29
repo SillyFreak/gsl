@@ -1,10 +1,12 @@
 from invoke import run, task
 
 @task
-def g4v(context):
+def g4v_antlr(context):
     run("antlr4 -Dlanguage=Python3 -package gsl.grammar -visitor -no-listener gsl/grammar/G4Visitor.g4")
-    run("git checkout gsl/grammar/G4VisitorVisitor.py")
-    run("g4v gsl/grammar/G4VisitorVisitor.g4v")
+
+@task
+def g4v_g4v(context):
+    run("g4v gsl/grammar/G4VVisitor.g4v")
 
 @task
 def grammars_tests(context):

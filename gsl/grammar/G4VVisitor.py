@@ -18,7 +18,7 @@ TokenExpr = pseudo_tuple('TokenExpr', ('token', 'multi', 'presence',))
 RefExpr = pseudo_tuple('RefExpr', ('ref', 'presence',))
 
 
-class G4VisitorVisitor(ParseTreeVisitor):
+class G4VVisitor(ParseTreeVisitor):
     def visitVisitor(self, ctx: G4VisitorParser.VisitorContext):
         return Visitor(
             self.visitNode(ctx.name),

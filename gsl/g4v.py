@@ -5,11 +5,10 @@ from .antlr import Antlr
 
 from .grammar.G4VisitorLexer import G4VisitorLexer
 from .grammar.G4VisitorParser import G4VisitorParser
-from .grammar.G4VisitorVisitor import *
-from .grammar.G4VisitorVisitor import G4VisitorVisitor as _G4VisitorVisitor
+from .grammar.G4VVisitor import *
 
 
-class G4VisitorVisitor(_G4VisitorVisitor):
+class G4VisitorVisitor(G4VVisitor):
     def visitAttributeRef(self, ctx:G4VisitorParser.AttributeRefContext):
         return super(G4VisitorVisitor, self).visitAttributeRef(ctx)[1:-1]
 
