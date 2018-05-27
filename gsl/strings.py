@@ -1,19 +1,17 @@
 import re
 
 
-def case(*args, to=None, **kwargs):
+def case(*, to, **kwargs):
     """Converts an identifier from one case type to another.
     An identifier is an ASCII string consisting of letters, digits and underscores, not starting with a digit.
     The supported case types are camelCase, PascalCase, snake_case, and CONSTANT_CASE,
     identified as camel, pascal, snake, and constant.
+    The input identifier is given as a keyword argument with one of these names,
+    and the output type is given as a string in the `to` keyword argument.
     If a given string does not conform to the specified case type (such as underscores in camel or pascal case strings,
     or double__underscores in general), the result may not be as desired,
     although things like snaKe_casE or CONStaNT_CASe will generally work."""
 
-    if len(args) != 0:
-        raise ValueError("only keyword arguments allowed")
-    if to is None:
-        raise ValueError("missing required keyword arg \"to\"")
     if len(kwargs) != 1:
         raise ValueError("expect exactly one source string argument")
 
