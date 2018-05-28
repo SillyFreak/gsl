@@ -58,8 +58,75 @@ def printlines(lines, end='\n', file=None):
         print(line, end=end, file=file)
 
 
-def print_to(file, mode="w"):
+def print_to(file, mode='w'):
     def decorator(fn):
         with open(file, mode) as f:
             printlines(fn(), file=f)
+    return decorator
+
+
+def generate(file):
+    def decorator(fn):
+        sections = {}
+        try:
+            f = open(file)
+        except FileNotFoundError:
+            pass
+        else:
+            with f:
+                open_section = None
+                for i, line in enumerate(f, start=1):
+                    m = re.search(r'<(/)?GSL customizable: (.+)>', line)
+                    if m:
+                        if m.group(1):
+                            if not open_section:
+                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(2)}'")
+                            elif m.group(2) != open_section:
+                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(2)}'"
+                                                 f" (open customizable is '{open_section}')")
+                            open_section = None
+                        else:
+                            if open_section:
+                                raise ValueError(f"Line {i} (old): nested customizable '{m.group(2)}'")
+                            open_section = m.group(2)
+                            if open_section in sections:
+                                raise ValueError(f"Line {i} (old): duplicate customizable '{open_section}'")
+                            sections[open_section] = []
+                    elif open_section:
+                        sections[open_section].append(line.rstrip('\r\n'))
+                if open_section:
+                    raise ValueError(f"Line {i} (old): unclosed customizable '{open_section}'")
+
+        @print_to(file)
+        def code():
+            open_section = None
+            new_sections = set()
+            skip = False
+            for i, line in enumerate(fn(), start=1):
+                m = re.search(r'<(/)?GSL customizable: (.+)>', line)
+                if m:
+                    yield line
+                    if m.group(1):
+                        if not open_section:
+                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(2)}'")
+                        elif m.group(2) != open_section:
+                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(2)}'"
+                                             f" (open customizable is '{open_section}')")
+                        open_section = None
+                        skip = False
+                    else:
+                        if open_section:
+                            raise ValueError(f"Line {i} (new): nested customizable '{m.group(2)}'")
+                        open_section = m.group(2)
+                        if open_section in new_sections:
+                            raise ValueError(f"Line {i} (new): duplicate customizable '{open_section}'")
+                        new_sections.add(open_section)
+                        skip = open_section in sections
+                        if skip:
+                            yield from sections[open_section]
+                elif not skip:
+                    yield line
+            if open_section:
+                raise ValueError(f"Line {i} (new): unclosed customizable '{open_section}'")
+
     return decorator
