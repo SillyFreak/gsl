@@ -19,7 +19,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='gsl',
-    version='0.0.1',
+    version='0.0.2',
     description='General Scripting Library',
     long_description=long_description,
     url="https://github.com/SillyFreak/gsl",
@@ -33,7 +33,7 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development',
         'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
     ],
 
     keywords='code generation',
