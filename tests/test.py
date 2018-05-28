@@ -1,5 +1,7 @@
 import unittest
+import os
 
+from gsl import lines, generate, print_to
 from gsl.dot_dict import DotDict
 from gsl.antlr import Antlr
 from gsl.yaml import YAML
@@ -169,3 +171,64 @@ process.ProcessExecuteAction process_execute_action = 20 {
             print("    {m.docstring}".format(m=message))
             for field in message.fields:
                 print("    {}".format(field))
+
+
+class TestGenerate(unittest.TestCase):
+    def assertFileEqual(self, file, content):
+        with open(file) as f:
+            self.assertEqual(f.read(), content)
+
+
+    def test_generate(self):
+        try:
+            os.remove('tests/test_output')
+        except FileNotFoundError:
+            pass
+
+        @generate('tests/test_output')
+        def code():
+            yield from lines("""\
+generated header
+# <GSL customizable: body>
+generated body
+# </GSL customizable: body>
+generated footer
+""")
+
+        self.assertFileEqual('tests/test_output', """\
+generated header
+# <GSL customizable: body>
+generated body
+# </GSL customizable: body>
+generated footer
+""")
+
+        @print_to('tests/test_output')
+        def code():
+            yield from lines("""\
+generated header
+# <GSL customizable: body>
+CUSTOMIZED body
+# </GSL customizable: body>
+generated footer
+""")
+
+        @generate('tests/test_output')
+        def code():
+            yield from lines("""\
+new generated header
+# <GSL customizable: body>
+new generated body
+# </GSL customizable: body>
+new generated footer
+""")
+
+        self.assertFileEqual('tests/test_output', """\
+new generated header
+# <GSL customizable: body>
+CUSTOMIZED body
+# </GSL customizable: body>
+new generated footer
+""")
+
+        os.remove('tests/test_output')
