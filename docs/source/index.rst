@@ -56,9 +56,7 @@ Which outputs::
 
     public class HelloWorld {
 
-        public void foo() {
-            // TODO
-        }
+        private int foo;
 
         public void bar() {
             // TODO
