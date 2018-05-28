@@ -56,9 +56,7 @@ Which outputs::
 
     public class HelloWorld {
 
-        public void foo() {
-            // TODO
-        }
+        private int foo;
 
         public void bar() {
             // TODO
@@ -456,6 +454,110 @@ so we provide the additional ``print_to`` decorator that runs the function::
 
 A thing to watch out for here is that ``print_to`` does not transform the method, it executes it once with context!
 Think of ``print_to`` as a pseudo content manager, and the ``code`` function as a ``with`` block that allows ``yield``.
+
+Allowing persistent code customization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Often, it is only feasible to generate a scaffolding for the desired code, leaving some parts to be implemented by hand.
+GSL supports that using the ``generate`` decorator.
+While using ``print_to`` can be read as a one-shot command - "print to this file" -,
+``generate`` is better viewed as a stateful description of a file's content - "this is how to get the file's contents".
+
+``generate`` looks for two specific patterns in both the existing file (if any) and the generated code:
+``<GSL customizable: label>`` and ``</GSL customizable: label>``, where ``label`` may be any string.
+A line that contains one of these patterns starts or ends, respectively,
+a block that is preserved during code generation.
+
+Let's look back at the output from the Java example,
+but now we add block markers for the method body and use ``generate``::
+
+    from gsl import lines, generate
+    from gsl.antlr import Antlr
+
+    from SimpleClassLexer import SimpleClassLexer
+    from SimpleClassParser import SimpleClassParser
+    from SimpleClassVisitor import SimpleClassVisitor, Class, Field, Method
+
+    antlr = Antlr(SimpleClassLexer, SimpleClassParser)
+    p = antlr.parser(antlr.input_stream("""\
+    class HelloWorld {
+        field foo;
+        method bar;
+    }
+    """))
+    model = p.model().accept(SimpleClassVisitor())
+
+    def class_declaration(model):
+        yield from lines(f"""\
+    public class {model.name} {{""")
+        for member in model.members:
+            if isinstance(member, Field):
+                yield from lines(f"""\
+
+        private int {member.name};""")
+            elif isinstance(member, Method):
+                yield from lines(f"""\
+
+        public void {member.name}() {{
+            // <GSL customizable: method-{member.name}>
+            // TODO
+            // </GSL customizable: method-{member.name}>
+        }}""")
+        yield from lines(f"""\
+    }}""")
+
+    for class_model in model:
+        @generate(f"{class_model.name}.java")
+        def code():
+            yield from class_declaration(class_model)
+
+When we run this code initially, the output is simply this::
+
+    public class HelloWorld {
+
+        private int foo;
+
+        public void bar() {
+            // <GSL customizable: method-bar>
+            // TODO
+            // </GSL customizable: method-bar>
+        }
+    }
+
+However, what happens when we "implement" ``bar`` by replacing the ``// TODO`` by ``baz();``, and recreate the code?
+Nothing, the change is preserved! Even if we change the structure of the generated code
+- e.g. by switching ``foo`` and ``bar`` in the model -, the method body remains the same.
+What's important is that the label ``method-bar`` is preserved. ::
+
+    public class HelloWorld {
+
+        public void bar() {
+            // <GSL customizable: method-bar>
+            baz();
+            // </GSL customizable: method-bar>
+        }
+
+        private int foo;
+    }
+
+The details are:
+
+- Any line that contains the case- and whitespace-sensitive patterns described above are used to delineate blocks.
+  The block label is matched greedily and may include whitespace; for example, in the line
+  ``<GSL customizable: foo> <GSL customizable: bar>``, the label is ``foo> <GSL customizable: bar``!
+- Blocks may not be nested, must be closed, and must have a unique label in the file.
+  This is true for file contents, and for the generated code that should be written to the file.
+  An error in the file contents will prevent the code generation;
+  an error in the generated code will abort the code generation at that line.
+  Note: This may mean customized code is lost!
+  It's important to use code versioning or another way of preserving customized code in such situation!
+- The block markers themselves are not preserved from the target file, they are regenerated every time.
+  For example, if the target file contains a block marker ``// <GSL ...>``,
+  and the code generator was changed to output ``/* <GSL ...> */``, the latter will appear in the target file.
+- Blocks in the target file that do not appear in the generated code are discarded, and
+  blocks in the generated code that do not appear in the target file retain the content from the code generator.
+  Only blocks that are both in the target file and in the code generator have their contents preserved.
+  The position of a block in the generated code is up to the code generator.
 
 Learn More
 ----------

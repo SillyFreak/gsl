@@ -45,7 +45,9 @@ class ParseTreeVisitor(object):
         child, = self.get_children(node, *types)
         return child
 
-    def collapse(self, nodes, constructor=None, name=None):
+    def collapse(self, nodes, *, constructor=None, name=None):
+        if constructor is not None and name is not None:
+            raise ValueError("constructor and name are mutually exclusive")
         try:
             node, = nodes
         except ValueError:
