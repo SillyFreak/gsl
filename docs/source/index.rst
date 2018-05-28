@@ -463,10 +463,12 @@ GSL supports that using the ``generate`` decorator.
 While using ``print_to`` can be read as a one-shot command - "print to this file" -,
 ``generate`` is better viewed as a stateful description of a file's content - "this is how to get the file's contents".
 
-``generate`` looks for two specific patterns in both the existing file (if any) and the generated code:
-``<GSL customizable: label>`` and ``</GSL customizable: label>``, where ``label`` may be any string.
+``generate`` looks for three specific patterns in both the existing file (if any) and the generated code:
+``<default GSL customizable: label>`` and ``<GSL customizable: label>`` mark the beginning,
+and ``</GSL customizable: label>`` marks the end of a customizable block, where ``label`` may be any string.
 A line that contains one of these patterns starts or ends, respectively,
-a block that is preserved during code generation.
+a block that can be preserved during code generation.
+If the opening marker contains the ``default``, code is replaced; otherwise modified code is preserved.
 
 Let's look back at the output from the Java example,
 but now we add block markers for the method body and use ``generate``::
@@ -499,7 +501,7 @@ but now we add block markers for the method body and use ``generate``::
                 yield from lines(f"""\
 
         public void {member.name}() {{
-            // <GSL customizable: method-{member.name}>
+            // <default GSL customizable: method-{member.name}>
             // TODO
             // </GSL customizable: method-{member.name}>
         }}""")
@@ -511,6 +513,7 @@ but now we add block markers for the method body and use ``generate``::
         def code():
             yield from class_declaration(class_model)
 
+In the code generator, ``default`` is mandatory.
 When we run this code initially, the output is simply this::
 
     public class HelloWorld {
@@ -518,14 +521,14 @@ When we run this code initially, the output is simply this::
         private int foo;
 
         public void bar() {
-            // <GSL customizable: method-bar>
+            // <default GSL customizable: method-bar>
             // TODO
             // </GSL customizable: method-bar>
         }
     }
 
-However, what happens when we "implement" ``bar`` by replacing the ``// TODO`` by ``baz();``, and recreate the code?
-Nothing, the change is preserved! Even if we change the structure of the generated code
+However, what happens when we "implement" ``bar`` by replacing the ``// TODO`` by ``baz();`` and removing the ``default``, and recreate the code?
+Of course nothing, the change is preserved! Even if we change the structure of the generated code
 - e.g. by switching ``foo`` and ``bar`` in the model -, the method body remains the same.
 What's important is that the label ``method-bar`` is preserved. ::
 
@@ -552,11 +555,12 @@ The details are:
   Note: This may mean customized code is lost!
   It's important to use code versioning or another way of preserving customized code in such situation!
 - The block markers themselves are not preserved from the target file, they are regenerated every time.
+  However, the ``default`` is removed if it's not present in the target file.
   For example, if the target file contains a block marker ``// <GSL ...>``,
-  and the code generator was changed to output ``/* <GSL ...> */``, the latter will appear in the target file.
+  and the code generator was changed to output ``/* <default GSL ...> */``, the output will contain ``/* <GSL ...> */``.
 - Blocks in the target file that do not appear in the generated code are discarded, and
-  blocks in the generated code that do not appear in the target file retain the content from the code generator.
-  Only blocks that are both in the target file and in the code generator have their contents preserved.
+  blocks in the generated code that do not appear or are default in the target file retain the content from the code generator.
+  Only blocks that are non-default in the target file and present in the code generator have their contents preserved.
   The position of a block in the generated code is up to the code generator.
 
 Learn More

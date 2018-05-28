@@ -26,7 +26,7 @@ public class {model.name} {{""")
             yield from lines(f"""\
 
     public void {member.name}() {{
-        // <GSL customizable: method-{member.name}>
+        // <default GSL customizable: method-{member.name}>
         // TODO
         // </GSL customizable: method-{member.name}>
     }}""")

@@ -76,23 +76,24 @@ def generate(file):
             with f:
                 open_section = None
                 for i, line in enumerate(f, start=1):
-                    m = re.search(r'<(/)?GSL customizable: (.+)>', line)
+                    m = re.search(r'<(?:(/)|(default )|)GSL customizable: (.+)>', line)
                     if m:
                         if m.group(1):
                             if not open_section:
-                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(2)}'")
-                            elif m.group(2) != open_section:
-                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(2)}'"
+                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(3)}'")
+                            elif m.group(3) != open_section:
+                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(3)}'"
                                                  f" (open customizable is '{open_section}')")
                             open_section = None
                         else:
                             if open_section:
-                                raise ValueError(f"Line {i} (old): nested customizable '{m.group(2)}'")
-                            open_section = m.group(2)
+                                raise ValueError(f"Line {i} (old): nested customizable '{m.group(3)}'")
+                            open_section = m.group(3)
                             if open_section in sections:
                                 raise ValueError(f"Line {i} (old): duplicate customizable '{open_section}'")
-                            sections[open_section] = []
-                    elif open_section:
+                            if not m.group(2):
+                                sections[open_section] = []
+                    elif open_section and open_section in sections:
                         sections[open_section].append(line.rstrip('\r\n'))
                 if open_section:
                     raise ValueError(f"Line {i} (old): unclosed customizable '{open_section}'")
@@ -103,26 +104,34 @@ def generate(file):
             new_sections = set()
             skip = False
             for i, line in enumerate(fn(), start=1):
-                m = re.search(r'<(/)?GSL customizable: (.+)>', line)
+                m = re.search(r'<(?:(/)|(default )|)GSL customizable: (.+)>', line)
                 if m:
-                    yield line
                     if m.group(1):
                         if not open_section:
-                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(2)}'")
-                        elif m.group(2) != open_section:
-                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(2)}'"
+                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(3)}'")
+                        elif m.group(3) != open_section:
+                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(3)}'"
                                              f" (open customizable is '{open_section}')")
                         open_section = None
                         skip = False
+
+                        yield line
                     else:
                         if open_section:
-                            raise ValueError(f"Line {i} (new): nested customizable '{m.group(2)}'")
-                        open_section = m.group(2)
+                            raise ValueError(f"Line {i} (new): nested customizable '{m.group(3)}'")
+                        if not m.group(2):
+                            raise ValueError(f"Line {i} (new): generated code must declare sections as `default`")
+                        open_section = m.group(3)
                         if open_section in new_sections:
                             raise ValueError(f"Line {i} (new): duplicate customizable '{open_section}'")
                         new_sections.add(open_section)
                         skip = open_section in sections
-                        if skip:
+
+                        if not skip:
+                            yield line
+                        else:
+                            # splice out the 'default ' exactly where it was found in the string
+                            yield line[:m.start(2)] + line[m.end(2):]
                             yield from sections[open_section]
                 elif not skip:
                     yield line
