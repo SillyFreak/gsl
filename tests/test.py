@@ -178,7 +178,6 @@ class TestGenerate(unittest.TestCase):
         with open(file) as f:
             self.assertEqual(f.read(), content)
 
-
     def test_generate(self):
         try:
             os.remove('tests/test_output')
@@ -189,17 +188,19 @@ class TestGenerate(unittest.TestCase):
         def code():
             yield from lines("""\
 generated header
-# <default GSL customizable: body>
-generated body
-# </GSL customizable: body>
+# <default GSL customizable: section1 />
+generated divider
+# <default GSL customizable: section2>
+# </GSL customizable: section2>
 generated footer
 """)
 
         self.assertFileEqual('tests/test_output', """\
 generated header
-# <default GSL customizable: body>
-generated body
-# </GSL customizable: body>
+# <default GSL customizable: section1 />
+generated divider
+# <default GSL customizable: section2>
+# </GSL customizable: section2>
 generated footer
 """)
 
@@ -207,9 +208,10 @@ generated footer
         def code():
             yield from lines("""\
 generated header
-# <default GSL customizable: body>
-CUSTOMIZED body
-# </GSL customizable: body>
+# <default GSL customizable: section1>
+CUSTOMIZED section1
+# </GSL customizable: section1>
+# <default GSL customizable: section2 />
 generated footer
 """)
 
@@ -217,45 +219,52 @@ generated footer
         def code():
             yield from lines("""\
 new generated header
-# <default GSL customizable: body>
-new generated body
-# </GSL customizable: body>
+# <default GSL customizable: section1 />
+new generated divider
+# !! <default GSL customizable: section2>
+# ! </GSL customizable: section2>
 new generated footer
 """)
 
         self.assertFileEqual('tests/test_output', """\
 new generated header
-# <default GSL customizable: body>
-new generated body
-# </GSL customizable: body>
+# <default GSL customizable: section1 />
+new generated divider
+# !! <default GSL customizable: section2>
+# ! </GSL customizable: section2>
 new generated footer
 """)
 
         @print_to('tests/test_output')
         def code():
             yield from lines("""\
-generated header
-# <GSL customizable: body>
-CUSTOMIZED body
-# </GSL customizable: body>
-generated footer
+new generated header
+# <GSL customizable: section1>
+CUSTOMIZED section1
+# </GSL customizable: section1>
+new generated divider
+# ! <GSL customizable: section2 />
+new generated footer
 """)
 
         @generate('tests/test_output')
         def code():
             yield from lines("""\
 newest generated header
-# <default GSL customizable: body>
-newest generated body
-# </GSL customizable: body>
+# !! <default GSL customizable: section2>
+# ! </GSL customizable: section2>
+newest generated divider
+# ! <default GSL customizable: section1 />
 newest generated footer
 """)
 
         self.assertFileEqual('tests/test_output', """\
 newest generated header
-# <GSL customizable: body>
-CUSTOMIZED body
-# </GSL customizable: body>
+# !! <GSL customizable: section2 />
+newest generated divider
+# ! <GSL customizable: section1>
+CUSTOMIZED section1
+# ! </GSL customizable: section1>
 newest generated footer
 """)
 
