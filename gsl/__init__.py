@@ -66,6 +66,24 @@ def print_to(file, mode='w'):
 
 
 def generate(file):
+    EMPTY, OPEN, CLOSE = 'empty', 'open', 'close'
+
+    def marker_match(line):
+        return re.search(r'<(default )?GSL customizable: ([-\w]+)( /)?>|</GSL customizable: ([-\w]+)>', line)
+
+    def marker_info(m):
+        default = m.group(1) is not None
+        opening = m.group(2) is not None
+        self_closing = m.group(3) is not None
+        name = m.group(2) if opening else m.group(4)
+
+        return name, EMPTY if self_closing else OPEN if opening else CLOSE, default if opening else None
+
+    def marker_format(m, name, mode, default):
+        prefix = '/' if mode == CLOSE else 'default ' if default else ''
+        suffix = ' /' if mode == EMPTY else ''
+        return f'{m.string[:m.start()]}<{prefix}GSL customizable: {name}{suffix}>{m.string[m.end():]}'
+
     def decorator(fn):
         sections = {}
         try:
@@ -76,23 +94,34 @@ def generate(file):
             with f:
                 open_section = None
                 for i, line in enumerate(f, start=1):
-                    m = re.search(r'<(/)?GSL customizable: (.+)>', line)
+                    m = marker_match(line)
                     if m:
-                        if m.group(1):
+                        name, mode, default = marker_info(m)
+                        if mode == CLOSE:
                             if not open_section:
-                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(2)}'")
-                            elif m.group(2) != open_section:
-                                raise ValueError(f"Line {i} (old): closing unopened customizable '{m.group(2)}'"
+                                raise ValueError(f"Line {i} (old): closing unopened customizable '{name}'")
+                            elif name != open_section:
+                                raise ValueError(f"Line {i} (old): closing unopened customizable '{name}'"
                                                  f" (open customizable is '{open_section}')")
+
                             open_section = None
-                        else:
+                        elif mode == OPEN:
                             if open_section:
-                                raise ValueError(f"Line {i} (old): nested customizable '{m.group(2)}'")
-                            open_section = m.group(2)
-                            if open_section in sections:
-                                raise ValueError(f"Line {i} (old): duplicate customizable '{open_section}'")
-                            sections[open_section] = []
-                    elif open_section:
+                                raise ValueError(f"Line {i} (old): nested customizable '{name}'")
+                            if name in sections:
+                                raise ValueError(f"Line {i} (old): duplicate customizable '{name}'")
+                            if not default:
+                                sections[name] = []
+
+                            open_section = name
+                        elif mode == EMPTY:
+                            if open_section:
+                                raise ValueError(f"Line {i} (old): nested customizable '{name}'")
+                            if name in sections:
+                                raise ValueError(f"Line {i} (old): duplicate customizable '{name}'")
+                            if not default:
+                                sections[name] = None
+                    elif open_section and open_section in sections:
                         sections[open_section].append(line.rstrip('\r\n'))
                 if open_section:
                     raise ValueError(f"Line {i} (old): unclosed customizable '{open_section}'")
@@ -103,27 +132,60 @@ def generate(file):
             new_sections = set()
             skip = False
             for i, line in enumerate(fn(), start=1):
-                m = re.search(r'<(/)?GSL customizable: (.+)>', line)
+                m = marker_match(line)
                 if m:
-                    yield line
-                    if m.group(1):
+                    name, mode, default = marker_info(m)
+                    if mode == CLOSE:
                         if not open_section:
-                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(2)}'")
-                        elif m.group(2) != open_section:
-                            raise ValueError(f"Line {i} (new): closing unopened customizable '{m.group(2)}'"
+                            raise ValueError(f"Line {i} (new): closing unopened customizable '{name}'")
+                        elif name != open_section:
+                            raise ValueError(f"Line {i} (new): closing unopened customizable '{name}'"
                                              f" (open customizable is '{open_section}')")
+
+                        if not skip:
+                            yield marker_format(m, name, CLOSE, None)
+
                         open_section = None
                         skip = False
-                    else:
+                    elif mode == OPEN:
                         if open_section:
-                            raise ValueError(f"Line {i} (new): nested customizable '{m.group(2)}'")
-                        open_section = m.group(2)
-                        if open_section in new_sections:
-                            raise ValueError(f"Line {i} (new): duplicate customizable '{open_section}'")
-                        new_sections.add(open_section)
-                        skip = open_section in sections
-                        if skip:
-                            yield from sections[open_section]
+                            raise ValueError(f"Line {i} (new): nested customizable '{name}'")
+                        if name in new_sections:
+                            raise ValueError(f"Line {i} (new): duplicate customizable '{name}'")
+                        if not default:
+                            raise ValueError(f"Line {i} (new): generated code must declare sections as `default`")
+                        new_sections.add(name)
+
+                        if name in sections:
+                            if sections[name] is None:
+                                yield marker_format(m, name, EMPTY, False)
+                            else:
+                                yield marker_format(m, name, OPEN, False)
+                                yield from sections[name]
+                                yield marker_format(m, name, CLOSE, None)
+                        else:
+                            yield marker_format(m, name, OPEN, True)
+
+                        open_section = name
+                        skip = name in sections
+                    elif mode == EMPTY:
+                        if open_section:
+                            raise ValueError(f"Line {i} (new): nested customizable '{name}'")
+                        if name in new_sections:
+                            raise ValueError(f"Line {i} (new): duplicate customizable '{name}'")
+                        if not default:
+                            raise ValueError(f"Line {i} (new): generated code must declare sections as `default`")
+                        new_sections.add(name)
+
+                        if name in sections:
+                            if sections[name] is None:
+                                yield marker_format(m, name, EMPTY, False)
+                            else:
+                                yield marker_format(m, name, OPEN, False)
+                                yield from sections[name]
+                                yield marker_format(m, name, CLOSE, None)
+                        else:
+                            yield marker_format(m, name, EMPTY, True)
                 elif not skip:
                     yield line
             if open_section:
